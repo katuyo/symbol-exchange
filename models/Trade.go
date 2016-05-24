@@ -37,14 +37,24 @@ func (t *Trade) Log() {
 
 func PushInMarket (o *Order){
     if o.GetType() == ORDER_TYPE_BUY {
-        sellEle := GetSellOrders(o.GetSymbol()).Back()
-        sellOrder := sellEle.Value.(Order)
-        amount := orderMarket(o, &sellOrder)
+        sellList := GetSellOrders(o.GetSymbol());
+        if  sellList == nil {
+            o.End()
+            return
+        }
+        sellEle := sellList.Back()
+        sellOrder := sellEle.Value.(*Order)
+        amount := orderMarket(o, sellOrder)
         trade := Trade {buyOrder: o, sellOrder: &sellOrder, type_: TRADE_TYPE_ALL,
             price: sellOrder.GetPrice(), amount: amount, timestamp: time.Now()}
         trade.Log()
     } else if o.GetType() == ORDER_TYPE_SELL {
-        buyEle := GetBuyOrders(o.GetSymbol()).Front()
+        buyList := GetBuyOrders(o.GetSymbol())
+        if buyList == nil {
+            o.End()
+            return
+        }
+        buyEle := buyList.Front()
         buyOrder := buyEle.Value.(Order)
         amount := orderMarket(o, &buyOrder)
         trade := Trade {buyOrder: &buyOrder, sellOrder: o, type_: TRADE_TYPE_ALL,
@@ -86,7 +96,6 @@ func orderMarket(o *Order, marketOrder *Order) int {
     PopOrder(marketOrder)
     return amount;
 }
-
 
 func hedgeOrders(symbol string) {
     buyMaxEle := GetBuyOrders(symbol).Front()

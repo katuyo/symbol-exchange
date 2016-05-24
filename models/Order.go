@@ -215,8 +215,6 @@ func findEleInList(symbol string, serial string, buy bool) (*list.List, *list.El
         if order.serial == serial {
             return orderList, orderEle
             break;
-        } else {
-            order = order.next
         }
         if orderEle = orderEle.Next(); orderEle == nil {
             break;
@@ -225,6 +223,50 @@ func findEleInList(symbol string, serial string, buy bool) (*list.List, *list.El
     return orderList, nil
 }
 
-func WithDraw(symbol string, serial string) int {
-    return 0
+func WithDraw(symbol string, serial string, buy bool) int {
+    var orderList *list.List
+    if buy {
+        orderList = GetBuyOrders(symbol)
+    } else {
+        orderList = GetSellOrders(symbol)
+    }
+    if orderList == nil {
+        return 0
+    }
+    orderEle := orderList.Front()
+    reset := true;
+    var order *Order
+    var preOrder *Order
+    for{
+        if orderEle == nil {
+            return 0
+        }
+        if reset {
+            order = orderEle.Value.(*Order)
+            preOrder = nil
+            reset = false
+        }
+        if order.serial == serial {
+            endOrder(order, preOrder, orderList, orderEle)
+            return order.amount
+        }
+        preOrder = order
+        order = order.next
+        if order == nil {
+            orderEle = orderEle.Next()
+            reset = true
+        }
+    }
+}
+
+func endOrder(order *Order, preOrder *Order, orderList *list.List, orderEle *list.Element){
+    order.End()
+    if preOrder == nil && order.next == nil {
+        orderList.Remove(orderEle)
+    } else if preOrder != nil {
+        preOrder.SetNext(order.next)
+    } else if order.next != nil {
+        orderList.InsertAfter(order.next, orderEle)
+        orderList.Remove(orderEle)
+    }
 }

@@ -23,7 +23,10 @@ func (oc *OrderController) Exchange(ctx *macaron.Context, o req.Order) {
 }
 
 func (oc *OrderController) Cancel(ctx *macaron.Context, w req.Withdraw) {
-    amount := models.WithDraw(w.Symbol, w.Serial)
+    amount := models.WithDraw(w.Symbol, w.Serial, true)
+    if amount == 0 {
+        amount = models.WithDraw(w.Symbol, w.Serial, false)
+    }
     if amount == 0 {
 	ctx.Render.JSON(200, res.JSONResult {Result: false, Msg: "Exchanged order."})
     } else {

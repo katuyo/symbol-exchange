@@ -14,18 +14,18 @@ func (oc *OrderController) Exchange(ctx *macaron.Context, o models.Order) {
     if !r.Result {
 	ctx.Render.JSON(200, result.JSONResult {Result: false, Msg: r.Msg})
     } else {
-	o = o.Refect()
-	models.PushInMarket(&o)
-	ctx.Render.JSON(200, result.JSONResult {Result: true, Order_Id: o.GetSerial()});
+	newO := o.Refactor()
+	models.PushInMarket(newO)
+	ctx.Render.JSON(200, result.JSONResult {Result: true, Order_Id: newO.GetSerial()});
     }
 }
 
 func (oc *OrderController) Cancel(ctx *macaron.Context) {
-    ctx.Render.JSON(200, result.JSONResult {Result: true, Order_Id: sn});
+    ctx.Render.JSON(200, result.JSONResult {Result: true});
 }
 
 func (oc *OrderController) validateOrder(o models.Order) result.Result {
-    var s = models.Stock {nil}
+    var s *models.Stock
     if s := models.GetStock(o.Symbol); s == nil {
 	return result.Result { Result: false, Code:2, Msg: "Stock symbol not exists."}
     }

@@ -6,24 +6,29 @@ import (
     "container/list"
 
     "../models"
+    "path/filepath"
 )
 
 func PrintDepth(symbol string){
-    f, err := os.OpenFile("../logs/" + symbol + "_depth.log", os.O_APPEND | os.O_CREATE, 0666)
+    r, _ := filepath.Abs("logs")
+    f, err := os.OpenFile(r + "/" + symbol + "_depth.log", os.O_APPEND | os.O_CREATE, 0666)
     if err != nil {
 	log.Fatalf("Error opening file: %v", err)
     }
     defer f.Close()
-    log.SetOutput(f)
-    log.Println("**********************************************")
-    log.Println("Type, Price, Amount")
+    logger := log.New(f, symbol, log.Llongfile)
+    logger.Println("**********************************************")
+    logger.Println("Type, Price, Amount")
     printDepth(models.GetSellOrders(symbol))
-    log.Println("##########  I'm The Cool Cut-off Line ######## ")
+    logger.Println("##########  I'm The Cool Cut-off Line ######## ")
     printDepth(models.GetBuyOrders(symbol))
-    log.Println("**********************************************")
+    logger.Println("**********************************************")
 }
 
 func printDepth(l *list.List){
+    if l == nil {
+        return
+    }
     orderEle := l.Front()
     o := orderEle.Value.(models.Order);
     for{

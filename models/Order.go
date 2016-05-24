@@ -53,7 +53,7 @@ func (o *Order) SetNext(next *Order) {
     o.next = next
 }
 
-func (o *Order) Refect() *Order {
+func (o *Order) Refactor() *Order {
     if o.serial != "" {
         return o
     }

@@ -4,8 +4,8 @@ import (
     "gopkg.in/macaron.v1"
     "github.com/go-macaron/binding"
 
-    "./controller"
-    "./models/req"
+    "github.com/katuyo/symbol-exchange/controller"
+    "github.com/katuyo/symbol-exchange/models/req"
 )
 
 func configRoutes(m *macaron.Macaron){

@@ -6,7 +6,7 @@ import (
     "path/filepath"
     "container/list"
 
-    "../models"
+    "github.com/katuyo/symbol-exchange/models"
 )
 
 func PrintDepth(symbol string){

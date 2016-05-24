@@ -6,8 +6,8 @@ import (
     "gopkg.in/macaron.v1"
     "github.com/go-macaron/renders"
 
-    "./models"
-    "./routins"
+    "github.com/katuyo/symbol-exchange/models"
+    "github.com/katuyo/symbol-exchange/routins"
 )
 
 func prepareStocks(){

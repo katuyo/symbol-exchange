@@ -1,12 +1,12 @@
 package controller
 
 import (
+    "fmt"
     "gopkg.in/macaron.v1"
 
-    "../models"
-    "../models/req"
-    "../models/res"
-	"fmt"
+    "github.com/katuyo/symbol-exchange/models"
+    "github.com/katuyo/symbol-exchange/models/req"
+    "github.com/katuyo/symbol-exchange/models/res"
 )
 
 type OrderController struct{}

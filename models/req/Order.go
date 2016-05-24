@@ -1,10 +1,11 @@
 package req
 
 import (
-	"gopkg.in/macaron.v1"
-	"github.com/go-macaron/binding"
-	"../res"
-	"../../models"
+    "gopkg.in/macaron.v1"
+    "github.com/go-macaron/binding"
+
+    "github.com/katuyo/symbol-exchange/models/res"
+    "github.com/katuyo/symbol-exchange/models"
 )
 
 type Order struct {

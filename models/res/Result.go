@@ -1,4 +1,4 @@
-package result
+package res
 
 type Result struct {
     Result bool

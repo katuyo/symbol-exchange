@@ -26,10 +26,11 @@ func main() {
             for k, _ := range models.GetStockMap() {
                 routins.PrintDepth(k)
             }
-            time.Sleep(1)
+            time.Sleep(1 * time.Second)
         }
     }()
 
+    m.Use(macaron.Static("public"))
     /**  Since no html UI, just for Render JSON*/
     m.Use(renders.Renderer(
         renders.Options{

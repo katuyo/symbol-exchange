@@ -1,4 +1,4 @@
-package result
+package res
 
 type JSONResult struct {
     Result bool

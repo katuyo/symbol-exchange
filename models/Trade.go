@@ -4,6 +4,7 @@ import (
     "time"
     "os"
     "log"
+    "path/filepath"
 )
 
 const (
@@ -22,63 +23,77 @@ type Trade struct {
 }
 
 func (t *Trade) Log() {
-    f, err := os.OpenFile("../logs/depth.log", os.O_APPEND | os.O_CREATE, 0666)
+    r, _ := filepath.Abs("logs")
+    symbol := t.sellOrder.GetSymbol()
+    f, err := os.OpenFile(r + "/" + symbol + "_trade.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
     if err != nil {
         log.Fatalf("Error opening file: %v", err)
     }
     defer f.Close()
-    log.SetOutput(f)
-    log.Println("**********************************************")
-    log.Println("Type, Price, Amount")
-
-    log.Println("##########  I'm The Cool Cut-off Line ######## ")
-
-    log.Println("**********************************************")
+    logger := log.New(f, symbol + " ", log.Ldate|log.Ltime)
+    logger.Printf(" %f %d ", t.price, t.amount)
+    logger.Println("")
 }
 
 func PushInMarket (o *Order){
-    if o.Type == ORDER_TYPE_BUY {
-        sellEle := GetSellOrders(o.Symbol).Back()
+    if o.GetType() == ORDER_TYPE_BUY {
+        sellEle := GetSellOrders(o.GetSymbol()).Back()
         sellOrder := sellEle.Value.(Order)
-
-        amount := sellOrder.Amount
-        if o.Amount <= amount {
-            amount = o.Amount
-        } else {
-            o.Amount = o.Amount - amount
-            sellOrder.Log(ORDER_STATUS_DONE)
-        }
-        o.Log(ORDER_STATUS_DONE)
-        o.Log(ORDER_STATUS_WITHDRAW_PART)
+        amount := orderMarket(o, &sellOrder)
         trade := Trade {buyOrder: o, sellOrder: &sellOrder, type_: TRADE_TYPE_ALL,
-            price: sellOrder.Price, amount: amount, timestamp: time.Now()}
+            price: sellOrder.GetPrice(), amount: amount, timestamp: time.Now()}
         trade.Log()
-    } else if o.Type == ORDER_TYPE_SELL {
-        buyEle := GetBuyOrders(o.Symbol).Front()
+    } else if o.GetType() == ORDER_TYPE_SELL {
+        buyEle := GetBuyOrders(o.GetSymbol()).Front()
         buyOrder := buyEle.Value.(Order)
-
-        amount := buyOrder.AmountSum()
-        if o.Amount <= amount {
-            amount = o.Amount
-        }
-
-        o.Log(ORDER_STATUS_DONE)
-        o.Log(ORDER_STATUS_WITHDRAW_PART)
-        trade := Trade {buyOrder: o, sellOrder: &buyOrder, type_: TRADE_TYPE_ALL,
-            price: buyOrder.Price, amount: amount, timestamp: time.Now()}
+        amount := orderMarket(o, &buyOrder)
+        trade := Trade {buyOrder: &buyOrder, sellOrder: o, type_: TRADE_TYPE_ALL,
+            price: buyOrder.GetPrice(), amount: amount, timestamp: time.Now()}
         trade.Log()
     } else {
-        PushInOrders(o)
+        PushOrder(o)
     }
-    rollTrade(o.Symbol)
+    hedgeOrders(o.GetSymbol())
 }
 
-func rollTrade(symbol string) {
+// Exchange immediately, withdraw rest
+func orderMarket(o *Order, marketOrder *Order) int {
+    o.SetPrice(marketOrder.GetPrice())
+    amount := 0
+    for{
+        if o.GetAmount() < marketOrder.GetAmount() {
+            o.Deal(o.GetAmount())
+            marketOrder.Deal(o.GetAmount())
+            amount = amount + o.GetAmount()
+            break;
+        } else if o.GetAmount() == marketOrder.GetAmount() {
+            o.Deal(o.GetAmount())
+            marketOrder.Deal(o.GetAmount())
+            amount = amount + o.GetAmount()
+            break;
+        } else {
+            marketOrder.Deal(marketOrder.GetAmount())
+            o.Deal(marketOrder.GetAmount())
+            amount = amount + marketOrder.GetAmount()
+            marketOrder = marketOrder.GetNext()
+        }
+        //WithDraw Rest
+        if marketOrder == nil {
+            o.End()
+            break;
+        }
+    }
+    PopOrder(marketOrder)
+    return amount;
+}
+
+
+func hedgeOrders(symbol string) {
     buyMaxEle := GetBuyOrders(symbol).Front()
     sellMinEle := GetSellOrders(symbol).Back()
     buyMax := buyMaxEle.Value.(Order)
     sellMin := sellMinEle.Value.(Order)
-    if buyMax.Price < sellMin.Price {
+    if buyMax.GetPrice() < sellMin.GetPrice() {
         return
     }
 }

@@ -5,7 +5,7 @@ import (
     "github.com/go-macaron/binding"
 
     "./controller"
-    "./models"
+    "./models/req"
 )
 
 func configRoutes(m *macaron.Macaron){
@@ -15,9 +15,9 @@ func configRoutes(m *macaron.Macaron){
     });
 
     orderController := new (controller.OrderController);
-    m.Post("/trade.do", binding.Json(models.Order{}), orderController.Exchange);
-    m.Post("/order.exc", binding.Json(models.Order{}), orderController.Exchange);
+    m.Post("/trade.do", binding.Json(req.Order{}), orderController.Exchange);
+    m.Post("/cancel_order.do", binding.Json(req.Withdraw{}), orderController.Cancel);
 
-    m.Post("/order.cancel", orderController.Cancel);
-    m.Post("/cancel_order.do", orderController.Cancel);
+    m.Post("/order.exchange", binding.Json(req.Order{}), orderController.Exchange);
+    m.Post("/order.withdraw", binding.Json(req.Withdraw{}), orderController.Cancel);
 }

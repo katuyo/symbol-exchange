@@ -2,7 +2,7 @@ package controller
 
 import (
     "fmt"
-    "gopkg.in/macaron.v1"
+    "github.com/go-macaron/renders"
 
     "github.com/katuyo/symbol-exchange/models"
     "github.com/katuyo/symbol-exchange/models/req"
@@ -11,37 +11,37 @@ import (
 
 type OrderController struct{}
 
-func (oc *OrderController) Exchange(ctx *macaron.Context, o req.Order) {
+func (oc *OrderController) Exchange(render renders.Render, o req.Order) {
     r := oc.validateOrder(o)
     if !r.Result {
-	ctx.Render.JSON(200, res.JSONResult {Result: false, Msg: r.Msg})
+	render.JSON(200, res.JSONResult {Result: false, Msg: r.Msg})
     } else {
 	newO := models.NewOrder(o.Symbol, o.Type, o.Price, o.Amount)
 	models.PushInMarket(newO)
-	ctx.Render.JSON(200, res.JSONResult {Result: true, Order_Id: newO.GetSerial()});
+	render.JSON(200, res.JSONResult {Result: true, Order_Id: newO.GetSerial()});
     }
 }
 
-func (oc *OrderController) Cancel(ctx *macaron.Context, w req.Withdraw) {
+func (oc *OrderController) Cancel(ren renders.Render, w req.Withdraw) {
     amount := models.WithDraw(w.Symbol, w.Serial, true)
     if amount == 0 {
         amount = models.WithDraw(w.Symbol, w.Serial, false)
     }
     if amount == 0 {
-	ctx.Render.JSON(200, res.JSONResult {Result: false, Msg: "Exchanged order."})
+	ren.JSON(200, res.JSONResult {Result: false, Msg: "Exchanged order."})
     } else {
-	ctx.Render.JSON(200, res.JSONResult {Result: true, Msg: fmt.Sprintf("Withdrawed amount: %d", amount)})
+	ren.JSON(200, res.JSONResult {Result: true, Msg: fmt.Sprintf("Withdrawed amount: %d", amount)})
     }
 }
 
 func (oc *OrderController) validateOrder(o req.Order) res.Result {
-    var s *models.Stock
-    if s := models.GetStock(o.Symbol); s == nil {
+    s := models.GetStock(o.Symbol);
+    if s == nil {
 	return res.Result { Result: false, Code:2, Msg: "Stock symbol not exists."}
     }
-    max := s.Open * 1.1
-    min := s.Open * 0.9
-    if o.Price < min || o.Price > max {
+    maxPrice := s.Open * 1.1
+    minPrice := s.Open * 0.9
+    if o.Price < minPrice || o.Price > maxPrice {
         return res.Result{ Result: false, Code:1, Msg: "Order price overflow."}
     }
     return res.Result { Result: true, Code: 0, Msg: ""}

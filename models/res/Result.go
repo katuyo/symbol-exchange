@@ -1,7 +1,7 @@
 package res
 
 type Result struct {
-    Result bool
-    Code int32
-    Msg string
+    Result bool `json:"result"`
+    Code int32 `json:"code"`
+    Msg string `json:"msg"`
 }

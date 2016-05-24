@@ -15,9 +15,9 @@ func configRoutes(m *macaron.Macaron){
     });
 
     orderController := new (controller.OrderController);
-    m.Post("/trade.do", binding.Json(req.Order{}), orderController.Exchange);
-    m.Post("/cancel_order.do", binding.Json(req.Withdraw{}), orderController.Cancel);
+    m.Post("/trade.do", binding.Bind(req.Order{}), orderController.Exchange);
+    m.Post("/cancel_order.do", binding.Bind(req.Withdraw{}), orderController.Cancel);
 
-    m.Post("/order.exchange", binding.Json(req.Order{}), orderController.Exchange);
-    m.Post("/order.withdraw", binding.Json(req.Withdraw{}), orderController.Cancel);
+    m.Post("/order.exchange", binding.Bind(req.Order{}), orderController.Exchange);
+    m.Post("/order.withdraw", binding.Bind(req.Withdraw{}), orderController.Cancel);
 }

@@ -24,13 +24,13 @@ func PrintDepth(symbol string){
     logger := log.New(f, symbol + " ", 0)
     logger.Println("**********************************************")
     logger.Println("Type, Price, Amount")
-    printDepth(sellList, true)
+    printDepth(logger, sellList, true)
     logger.Println("##########  I'm The Cool Cut-off Line ######## ")
-    printDepth(buyList, false)
+    printDepth(logger, buyList, false)
     logger.Println("**********************************************")
 }
 
-func printDepth(l *list.List, sell bool){
+func printDepth(logger *log.Logger, l *list.List, sell bool){
     if l == nil {
         return
     }
@@ -43,9 +43,9 @@ func printDepth(l *list.List, sell bool){
             index = index + 1
         }
     }
-    o := orderEle.Value.(models.Order);
+    o := orderEle.Value.(*models.Order);
     for count > 0 {
-        log.Printf("%s, %s, %d", o.GetType(), o.GetPrice(), o.AmountSum());
+        logger.Printf("%s, %f, %d", o.GetType(), o.GetPrice(), o.AmountSum());
 	if orderEle = orderEle.Next(); orderEle == nil {
 	    break;
 	}

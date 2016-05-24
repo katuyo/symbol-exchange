@@ -11,25 +11,12 @@ import (
 )
 
 func prepareStocks(){
-    stock := models.Stock{Symbol: "WSCN", Open: 100}
+    stock := &models.Stock{Symbol: "WSCN", Open: 100}
     models.PushStock(stock)
 }
 
 func main() {
     m := macaron.Classic()
-
-    prepareStocks()
-    configRoutes(m)
-
-    go func() {
-        for {
-            for k, _ := range models.GetStockMap() {
-                routins.PrintDepth(k)
-            }
-            time.Sleep(1 * time.Second)
-        }
-    }()
-
     m.Use(macaron.Static("public"))
     /**  Since no html UI, just for Render JSON*/
     m.Use(renders.Renderer(
@@ -42,6 +29,18 @@ func main() {
             IndentXML:       true,        // Output human readable XML
             HTMLContentType: "text/html", // Output XHTML content type instead of default "text/html"
         }))
+
+    configRoutes(m)
+
+    prepareStocks()
+    go func() {
+        for {
+            for k, _ := range models.GetStockMap() {
+                routins.PrintDepth(k)
+            }
+            time.Sleep(1 * time.Second)
+        }
+    }()
 
     m.Run()
 }

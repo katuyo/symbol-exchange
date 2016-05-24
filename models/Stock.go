@@ -18,8 +18,8 @@ func (s *Stock) GetDate() time.Time {
 
 var stockMap = make (map[string]*Stock)
 
-func PushStock(s Stock){
-    stockMap[s.Symbol] = &s;
+func PushStock(s *Stock){
+    stockMap[s.Symbol] = s;
 }
 
 func GetStock(symbol string) *Stock {

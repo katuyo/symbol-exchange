@@ -1,8 +1,9 @@
-#coding=utf8
+# coding=utf8
 
 import random
 import logging
 import json
+import time
 
 from httplib2 import Http
 from logging import handlers
@@ -20,8 +21,6 @@ h = Http()
 
 def send():
     exchange_type = random_type()
-    # r, c = h.request("http://127.0.0.1:4000/trade.do", "POST",
-    #                  "{\"symbol\": \"WSCN\", \"type\": \"sell\", \"amount\": 10, \"price\": 100.00}", {"Content-Type": "text/json"})
     r, c = h.request("http://127.0.0.1:4000/trade.do", "POST",
                      "{\"symbol\": \"WSCN\", \"type\": \"" + exchange_type + "\", \"amount\": " + random_amount() +
                      ", \"price\": " + random_price() + "}", {"Content-Type": "text/json"})
@@ -42,4 +41,6 @@ def random_price():
     return str(round(random.uniform(90.00, 110.00), 2))
 
 if __name__ == '__main__':
-    send()
+    for i in range(0, 1000):
+        send()
+        time.sleep(0.230)

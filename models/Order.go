@@ -29,7 +29,8 @@ type Order struct {
     serial string
     symbol string
     type_ string
-    price float32
+    callPrice float32
+    dealPrice float32
     amount int
     status string
     timestamp time.Time
@@ -38,7 +39,7 @@ type Order struct {
 
 func NewOrder(symbol string, type_ string, price float32, amount int) *Order {
     return &Order{symbol: symbol, serial: uuid.NewV4().String(), type_: type_,
-        price: price, amount: amount, status: ORDER_STATUS_NEW, timestamp: time.Now()}
+        callPrice: price, amount: amount, status: ORDER_STATUS_NEW, timestamp: time.Now()}
 }
 
 func (o *Order) GetSerial() string {
@@ -53,11 +54,16 @@ func (o *Order) GetType() string {
     return o.type_
 }
 
-func (o *Order) GetPrice() float32 {
-    return o.price
+func (o *Order) CallPrice() float32 {
+    return o.callPrice
 }
-func (o *Order) SetPrice(p float32) {
-    o.price = p
+
+func (o *Order) GetPrice() {
+    return o.dealPrice
+}
+
+func (o *Order) DealPrice(p float32) {
+    o.dealPrice = p
 }
 
 func (o *Order) GetAmount() int {
@@ -97,6 +103,7 @@ func (o *Order) Deal(amount int) *Order {
         o.log(amount)
     } else {
         o.status = ORDER_STATUS_DONE_PART
+        o.log(amount)
     }
     return o
 }
@@ -123,7 +130,7 @@ func (o *Order) log(amountPart int) {
     if amount == 0 {
         amount = o.amount
     }
-    logger.Printf("%s, %s, %s, %f %d %s", time.Now(), o.serial, o.type_, o.price, amount, o.status)
+    logger.Printf("%s, %s, %s, %f %d %s", time.Now(), o.serial, o.type_, o.dealPrice, amount, o.status)
     logger.Println("")
 }
 
@@ -168,11 +175,11 @@ func pushOrders(orders *list.List, o *Order) {
     baseOrderEle := orders.Front()
     for {
         baseOrder := baseOrderEle.Value.(Order)
-        if baseOrder.price < o.price {
+        if baseOrder.callPrice < o.callPrice {
             orders.InsertBefore(o, baseOrderEle)
             return
         }
-        if baseOrder.price == o.price {
+        if baseOrder.callPrice == o.callPrice {
             baseOrder.SetNext(o)
             return
         }
@@ -183,44 +190,57 @@ func pushOrders(orders *list.List, o *Order) {
     }
 }
 
-func PopOrder(o *Order){
-    l, ele := findEleInList(o.symbol, o.serial, o.type_ == ORDER_TYPE_ASK || o.type_ == ORDER_TYPE_BUY)
-    order := ele.Value.(*Order)
-    for {
-        var nextEle *list.Element
-        if order.status == ORDER_STATUS_NEW || order.status == ORDER_STATUS_DONE_PART {
-            return
-        } else {
-            nextEle = ele.Next()
-            l.Remove(ele)
-        }
-        if order.next != nil {
-            return
-        }
-        ele = l.InsertBefore(order.next, nextEle);
-        order = order.next
-    }
-}
 
-func findEleInList(symbol string, serial string, buy bool) (*list.List, *list.Element) {
+func OrderOne (symbol string, buy bool) (*list.List, *list.Element) {
     var orderList *list.List
     if buy {
         orderList = GetBuyOrders(symbol)
     } else {
         orderList = GetSellOrders(symbol)
     }
-    orderEle := orderList.Front()
-    for{
-        order := orderEle.Value.(*Order)
-        if order.serial == serial {
-            return orderList, orderEle
-            break;
+    if (orderList == nil) {
+        return nil, nil
+    }
+    if(buy) {
+        return orderList, orderList.Front()
+    } else {
+        return orderList, orderList.Back();
+    }
+}
+func PopOrderOne(symbol string){
+    PopOrder(symbol, true)
+    PopOrder(symbol, false)
+}
+func PopOrder(symbol string, buy bool){
+    list, ele := OrderOne(symbol, buy)
+    if (list == nil) {
+        return
+    }
+    order := ele.Value.(*Order)
+    var preOrder *Order
+    for {
+        if order.status == ORDER_STATUS_NEW || order.status == ORDER_STATUS_DONE_PART {
+            return
         }
-        if orderEle = orderEle.Next(); orderEle == nil {
-            break;
+        putOrderOut(order, preOrder, list, ele)
+        preOrder = order
+        order = order.next
+        if order == nil {
+            return
         }
     }
-    return orderList, nil
+}
+
+func putOrderOut(order *Order, preOrder *Order, orderList *list.List, orderEle *list.Element){
+    order.End()
+    if preOrder == nil && order.next == nil {
+        orderList.Remove(orderEle)
+    } else if preOrder != nil {
+        preOrder.SetNext(order.next)
+    } else if order.next != nil {
+        orderList.InsertAfter(order.next, orderEle)
+        orderList.Remove(orderEle)
+    }
 }
 
 func WithDraw(symbol string, serial string, buy bool) int {
@@ -237,7 +257,7 @@ func WithDraw(symbol string, serial string, buy bool) int {
     reset := true;
     var order *Order
     var preOrder *Order
-    for{
+    for{/**Find next order in same price, if not exist, reset, go next in order list*/
         if orderEle == nil {
             return 0
         }
@@ -247,7 +267,7 @@ func WithDraw(symbol string, serial string, buy bool) int {
             reset = false
         }
         if order.serial == serial {
-            endOrder(order, preOrder, orderList, orderEle)
+            putOrderOut(order, preOrder, orderList, orderEle)
             return order.amount
         }
         preOrder = order
@@ -256,17 +276,5 @@ func WithDraw(symbol string, serial string, buy bool) int {
             orderEle = orderEle.Next()
             reset = true
         }
-    }
-}
-
-func endOrder(order *Order, preOrder *Order, orderList *list.List, orderEle *list.Element){
-    order.End()
-    if preOrder == nil && order.next == nil {
-        orderList.Remove(orderEle)
-    } else if preOrder != nil {
-        preOrder.SetNext(order.next)
-    } else if order.next != nil {
-        orderList.InsertAfter(order.next, orderEle)
-        orderList.Remove(orderEle)
     }
 }

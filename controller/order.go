@@ -28,7 +28,7 @@ func (oc *OrderController) Cancel(ren renders.Render, w req.Withdraw) {
         amount = models.WithDraw(w.Symbol, w.Serial, false)
     }
     if amount == 0 {
-	ren.JSON(200, res.JSONResult {Result: false, Msg: "Exchanged order."})
+	ren.JSON(200, res.JSONResult {Result: false, Msg: "Not found order, may be it has been dealed."})
     } else {
 	ren.JSON(200, res.JSONResult {Result: true, Msg: fmt.Sprintf("Withdrawed amount: %d", amount)})
     }

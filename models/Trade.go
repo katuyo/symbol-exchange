@@ -7,16 +7,9 @@ import (
     "path/filepath"
 )
 
-const (
-    TRADE_TYPE_ALL = "All"
-    TRADE_TYPE_PART = "Part"
-    TRADE_TYPE_REST = "Rest"
-)
-
 type Trade struct {
     buyOrder *Order
     sellOrder *Order
-    type_ string
     price float32
     amount int
     timestamp time.Time
@@ -31,81 +24,91 @@ func (t *Trade) Log() {
     }
     defer f.Close()
     logger := log.New(f, symbol + " ", log.Ldate|log.Ltime)
-    logger.Printf(" %f %d ", t.price, t.amount)
+    logger.Printf("%s %f %d ", t.timestamp.String(), t.price, t.amount)
     logger.Println("")
 }
 
-func PushInMarket (o *Order){
-    if o.GetType() == ORDER_TYPE_BUY {
-        sellList := GetSellOrders(o.GetSymbol());
-        if  sellList == nil {
-            o.End()
-            return
-        }
-        sellEle := sellList.Back()
-        sellOrder := sellEle.Value.(*Order)
-        amount := orderMarket(o, sellOrder)
-        trade := Trade {buyOrder: o, sellOrder: sellOrder, type_: TRADE_TYPE_ALL,
-            price: sellOrder.GetPrice(), amount: amount, timestamp: time.Now()}
-        trade.Log()
-    } else if o.GetType() == ORDER_TYPE_SELL {
-        buyList := GetBuyOrders(o.GetSymbol())
-        if buyList == nil {
-            o.End()
-            return
-        }
-        buyEle := buyList.Front()
-        buyOrder := buyEle.Value.(*Order)
-        amount := orderMarket(o, buyOrder)
-        trade := Trade {buyOrder: buyOrder, sellOrder: o, type_: TRADE_TYPE_ALL,
-            price: buyOrder.GetPrice(), amount: amount, timestamp: time.Now()}
-        trade.Log()
-    } else {
+func PushInMarket (o *Order) {
+    if(o.GetType() == ORDER_TYPE_ASK || o.GetType() == ORDER_TYPE_BID) {
         PushOrder(o)
+    } else {
+        list, ele := OrderOne(o.GetSymbol(), o.GetType() == ORDER_TYPE_BUY)
+        if  list == nil {
+            o.End()
+            return
+        }
+        exchange(o, ele.Value.(*Order))
     }
     hedgeOrders(o.GetSymbol())
 }
 
-// Exchange immediately, withdraw rest
-func orderMarket(o *Order, marketOrder *Order) int {
-    o.SetPrice(marketOrder.GetPrice())
+func exchange(o *Order, marketOrder *Order) int {
+    o.DealPrice(marketOrder.CallPrice())
     amount := 0
+    currentMarketOrder := marketOrder
     for{
-        if o.GetAmount() < marketOrder.GetAmount() {
+        if o.GetAmount() < currentMarketOrder.GetAmount() {
             o.Deal(o.GetAmount())
-            marketOrder.Deal(o.GetAmount())
+            currentMarketOrder.Deal(o.GetAmount())
             amount = amount + o.GetAmount()
             break;
-        } else if o.GetAmount() == marketOrder.GetAmount() {
+        } else if o.GetAmount() == currentMarketOrder.GetAmount() {
             o.Deal(o.GetAmount())
-            marketOrder.Deal(o.GetAmount())
+            currentMarketOrder.Deal(o.GetAmount())
             amount = amount + o.GetAmount()
             break;
-        } else {
-            marketOrder.Deal(marketOrder.GetAmount())
-            o.Deal(marketOrder.GetAmount())
-            amount = amount + marketOrder.GetAmount()
-            marketOrder = marketOrder.GetNext()
         }
-        //WithDraw Rest
-        if marketOrder == nil {
-            o.End()
-            break;
+        currentMarketOrder.Deal(currentMarketOrder.GetAmount())
+        o.Deal(currentMarketOrder.GetAmount())
+        amount = amount + currentMarketOrder.GetAmount()
+        if (currentMarketOrder.GetNext() != nil) { //Continue;
+            currentMarketOrder = currentMarketOrder.GetNext();
+            continue
+        } else if (o.GetType() == ORDER_TYPE_BUY || o.GetType() == ORDER_TYPE_SELL){
+            o.End();// Withdraw Rest Amount.
         }
+        break
     }
-    PopOrder(marketOrder)
-    return amount;
+    PopOrderOne(o.symbol)
+    b, s := buySell(o, marketOrder)
+    trade := &Trade {buyOrder: b, sellOrder: s, timestamp: time.Now(),
+        price: marketOrder.CallPrice(), amount: amount}
+    trade.Log()
+    return amount
 }
 
 func hedgeOrders(symbol string) {
-    buyMaxEle := GetBuyOrders(symbol).Front()
-    sellMinEle := GetSellOrders(symbol).Back()
-    buyMax := buyMaxEle.Value.(Order)
-    sellMin := sellMinEle.Value.(Order)
+    list, buyMaxEle := OrderOne(symbol, true)
+    if (list == nil) {
+        return
+    }
+    list, sellMinEle := OrderOne(symbol, false)
+    if (list == nil) {
+        return
+    }
+
+    buyMax := buyMaxEle.Value.(*Order)
+    sellMin := sellMinEle.Value.(*Order)
     if buyMax.GetPrice() < sellMin.GetPrice() {
         return
     }
-    //TODO While buyMaxPrice > sellMinPrice , which would be the deal price ?
-
+    exchange(chooseBaseOrder(buyMax, sellMin))
+    hedgeOrders(symbol)
 }
 
+//TODO While buyMaxPrice > sellMinPrice , which would be the deal price ?
+func chooseBaseOrder (b *Order, s *Order) (*Order, *Order) {
+    if (b.AmountSum() > s.AmountSum()){
+        return s, b;
+    } else {
+        return b, s;
+    }
+}
+
+func buySell (l *Order, r *Order) (*Order, *Order) {
+    if l.GetType() == ORDER_TYPE_BUY || l.GetType() == ORDER_TYPE_ASK {
+        return l, r
+    } else {
+        return r, l
+    }
+}

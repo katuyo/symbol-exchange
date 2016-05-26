@@ -49,8 +49,8 @@ func printDepth(logger *log.Logger, l *list.List, sell bool){
         logger.Println("No Depth in this order list.");
         return
     }
-    o := orderEle.Value.(*models.Order);
     for count > 0 {
+        o := orderEle.Value.(*models.Order);
         logger.Printf("%s, %.2f, %d", o.GetType(), o.CallPrice(), o.AmountSum());
 	orderEle = orderEle.Next();
         if orderEle == nil {

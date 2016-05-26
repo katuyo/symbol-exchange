@@ -5,6 +5,7 @@ import (
     "os"
     "log"
     "path/filepath"
+    "bufio"
 )
 
 type Trade struct {
@@ -18,12 +19,19 @@ type Trade struct {
 func (t *Trade) Log() {
     r, _ := filepath.Abs("logs")
     symbol := t.sellOrder.GetSymbol()
-    f, err := os.OpenFile(r + "/" + symbol + "_trade.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+    f, err := os.OpenFile(r + "/" + symbol + "_trade.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
     if err != nil {
-        log.Fatalf("Error opening file: %v", err)
+        log.Fatalf("Error while open trade log %v", err)
     }
     defer f.Close()
-    logger := log.New(f, symbol + " ", log.Ldate|log.Ltime)
+
+    logger := log.New(f, symbol + " ", 0)
+    buf := bufio.NewReader(f)
+    line, err := buf.ReadString('\n')
+    if line == "" {
+        logger.Println("|DateTime                              |Price     |Amount|")
+        logger.Println("")
+    }
     logger.Printf("%s %f %d ", t.timestamp.String(), t.price, t.amount)
     logger.Println("")
 }
@@ -33,7 +41,7 @@ func PushInMarket (o *Order) {
         PushOrder(o)
     } else {
         list, ele := OrderOne(o.GetSymbol(), o.GetType() == ORDER_TYPE_BUY)
-        if  list == nil {
+        if  list == nil || ele == nil {
             o.End()
             return
         }
@@ -79,11 +87,11 @@ func exchange(o *Order, marketOrder *Order) int {
 
 func hedgeOrders(symbol string) {
     list, buyMaxEle := OrderOne(symbol, true)
-    if (list == nil) {
+    if (list == nil || buyMaxEle == nil) {
         return
     }
     list, sellMinEle := OrderOne(symbol, false)
-    if (list == nil) {
+    if (list == nil || sellMinEle == nil) {
         return
     }
 

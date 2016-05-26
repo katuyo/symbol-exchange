@@ -4,10 +4,12 @@ import (
     "time"
     "os"
     "log"
+    "bufio"
     "container/list"
     "path/filepath"
 
     "github.com/satori/go.uuid"
+
 )
 
 const (
@@ -120,17 +122,24 @@ func (o *Order) End() *Order {
 
 func (o *Order) log(amountPart int) {
     r, _ := filepath.Abs("logs")
-    f, err := os.OpenFile(r + "/" + o.symbol + "_order.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+    f, err := os.OpenFile(r + "/" + o.symbol + "_order.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
     if err != nil {
-        log.Fatalf("Error opening file: %v", err)
+        log.Fatalf("Error while open order file %v", err)
     }
     defer f.Close()
+
     logger := log.New(f, o.symbol + " ", 0)
+    buf := bufio.NewReader(f)
+    line, err := buf.ReadString('\n')
+    if line == "" {
+        logger.Println("| DateTime                             | Order Id                             | Type     |  Price  |Amount | Status |")
+        logger.Println("")
+    }
     amount := amountPart
     if amount == 0 {
         amount = o.amount
     }
-    logger.Printf("%s, %s, %s, %f %d %s", time.Now(), o.serial, o.type_, o.dealPrice, amount, o.status)
+    logger.Printf("%s, %s, %s, %f %d %s", time.Now(), o.serial, o.type_, o.callPrice, amount, o.status)
     logger.Println("")
 }
 
@@ -174,7 +183,7 @@ func pushOrders(orders *list.List, o *Order) {
     }
     baseOrderEle := orders.Front()
     for {
-        baseOrder := baseOrderEle.Value.(Order)
+        baseOrder := baseOrderEle.Value.(*Order)
         if baseOrder.callPrice < o.callPrice {
             orders.InsertBefore(o, baseOrderEle)
             return
@@ -213,7 +222,7 @@ func PopOrderOne(symbol string){
 }
 func PopOrder(symbol string, buy bool){
     list, ele := OrderOne(symbol, buy)
-    if (list == nil) {
+    if (list == nil || ele == nil) {
         return
     }
     order := ele.Value.(*Order)

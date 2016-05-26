@@ -28,10 +28,12 @@ func PrintDepth(symbol string){
     logger.Println("##########  I'm The Cool Cut-off Line ######## ")
     printDepth(logger, buyList, false)
     logger.Println("**********************************************")
+    logger.Println("")
 }
 
 func printDepth(logger *log.Logger, l *list.List, sell bool){
     if l == nil {
+        logger.Println("No Depth in this order list.");
         return
     }
     count := 20
@@ -43,12 +45,16 @@ func printDepth(logger *log.Logger, l *list.List, sell bool){
             index = index + 1
         }
     }
+    if (orderEle == nil) {
+        logger.Println("No Depth in this order list.");
+        return
+    }
     o := orderEle.Value.(*models.Order);
     for count > 0 {
-        logger.Printf("%s, %f, %d", o.GetType(), o.GetPrice(), o.AmountSum());
+        logger.Printf("%s, %.2f, %d", o.GetType(), o.CallPrice(), o.AmountSum());
 	if orderEle = orderEle.Next(); orderEle == nil {
 	    break;
 	}
-        count = count -1
+        count = count - 1
     }
 }

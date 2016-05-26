@@ -11,7 +11,7 @@ import (
 )
 
 func prepareStocks(){
-    stock := &models.Stock{Symbol: "WSCN", Open: 100}
+    stock := &models.Stock{Symbol: "WSCN", Open: 100.00, InitAmount: 2000}
     models.PushStock(stock)
     stock.Issue()
 }

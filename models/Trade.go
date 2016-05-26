@@ -11,7 +11,7 @@ import (
 type Trade struct {
     buyOrder *Order
     sellOrder *Order
-    price float32
+    price float64
     amount int
     timestamp time.Time
 }
@@ -32,7 +32,7 @@ func (t *Trade) Log() {
         logger.Println("|DateTime                              |Price     |Amount|")
         logger.Println("")
     }
-    logger.Printf("%s %f %d ", t.timestamp.String(), t.price, t.amount)
+    logger.Printf("%s %.2f %d", t.timestamp.String(), t.price, t.amount)
     logger.Println("")
 }
 
@@ -40,7 +40,7 @@ func PushInMarket (o *Order) {
     if(o.GetType() == ORDER_TYPE_ASK || o.GetType() == ORDER_TYPE_BID) {
         PushOrder(o)
     } else {
-        list, ele := OrderOne(o.GetSymbol(), o.GetType() == ORDER_TYPE_BUY)
+        list, ele := OrderOne(o.GetSymbol(), o.GetType() != ORDER_TYPE_BUY)
         if  list == nil || ele == nil {
             o.End()
             return
@@ -55,20 +55,16 @@ func exchange(o *Order, marketOrder *Order) int {
     amount := 0
     currentMarketOrder := marketOrder
     for{
-        if o.GetAmount() < currentMarketOrder.GetAmount() {
-            o.Deal(o.GetAmount())
-            currentMarketOrder.Deal(o.GetAmount())
+        if o.GetAmount() <= currentMarketOrder.GetAmount() {
             amount = amount + o.GetAmount()
-            break;
-        } else if o.GetAmount() == currentMarketOrder.GetAmount() {
-            o.Deal(o.GetAmount())
             currentMarketOrder.Deal(o.GetAmount())
-            amount = amount + o.GetAmount()
+            o.Deal(o.GetAmount())
             break;
         }
-        currentMarketOrder.Deal(currentMarketOrder.GetAmount())
-        o.Deal(currentMarketOrder.GetAmount())
         amount = amount + currentMarketOrder.GetAmount()
+        o.Deal(currentMarketOrder.GetAmount())
+        currentMarketOrder.Deal(currentMarketOrder.GetAmount())
+
         if (currentMarketOrder.GetNext() != nil) { //Continue;
             currentMarketOrder = currentMarketOrder.GetNext();
             continue
@@ -97,7 +93,7 @@ func hedgeOrders(symbol string) {
 
     buyMax := buyMaxEle.Value.(*Order)
     sellMin := sellMinEle.Value.(*Order)
-    if buyMax.GetPrice() < sellMin.GetPrice() {
+    if buyMax.CallPrice() < sellMin.CallPrice() {
         return
     }
     exchange(chooseBaseOrder(buyMax, sellMin))

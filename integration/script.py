@@ -20,12 +20,14 @@ h = Http()
 
 def send():
     exchange_type = random_type()
+    # r, c = h.request("http://127.0.0.1:4000/trade.do", "POST",
+    #                  "{\"symbol\": \"WSCN\", \"type\": \"sell\", \"amount\": 10, \"price\": 100.00}", {"Content-Type": "text/json"})
     r, c = h.request("http://127.0.0.1:4000/trade.do", "POST",
                      "{\"symbol\": \"WSCN\", \"type\": \"" + exchange_type + "\", \"amount\": " + random_amount() +
                      ", \"price\": " + random_price() + "}", {"Content-Type": "text/json"})
     if exchange_type == "buy" or exchange_type == "sell":
         obj = json.loads(c)
-        logger.info(obj['order_id'])
+        logger.info("%s, %s", obj['order_id'], exchange_type)
 
 
 def random_type():

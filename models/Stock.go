@@ -4,7 +4,7 @@ import "time"
 
 type Stock struct {
     Symbol string
-    Open  float32
+    Open  float64
     InitAmount int
     date  time.Time
 }

@@ -11,7 +11,7 @@ import (
 type Order struct {
     Symbol string `json:"symbol" binding:"Required;MaxSize(10)"`
     Type string   `json:"type" binding:"In(buy,sell,buy_market,sell_market)"`
-    Price float32 `json:"price"`
+    Price float64 `json:"price"`
     Amount int    `json:"amount" binding:"Required;Range(1,999)"`
 }
 

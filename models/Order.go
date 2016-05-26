@@ -10,6 +10,7 @@ import (
 
     "github.com/satori/go.uuid"
 
+    "strconv"
 )
 
 const (
@@ -31,15 +32,15 @@ type Order struct {
     serial string
     symbol string
     type_ string
-    callPrice float32
-    dealPrice float32
+    callPrice float64
+    dealPrice float64
     amount int
     status string
     timestamp time.Time
     next *Order // For depth, Since the same price orders is merged , if not to lose order, linked them.
 }
 
-func NewOrder(symbol string, type_ string, price float32, amount int) *Order {
+func NewOrder(symbol string, type_ string, price float64, amount int) *Order {
     return &Order{symbol: symbol, serial: uuid.NewV4().String(), type_: type_,
         callPrice: price, amount: amount, status: ORDER_STATUS_NEW, timestamp: time.Now()}
 }
@@ -56,15 +57,25 @@ func (o *Order) GetType() string {
     return o.type_
 }
 
-func (o *Order) CallPrice() float32 {
+func (o *Order) CallPrice() float64 {
     return o.callPrice
 }
 
-func (o *Order) GetPrice() float32 {
-    return o.dealPrice
+func (o *Order) CallPriceString() string {
+    return strconv.FormatFloat(o.callPrice, 'f', 2, 32)
 }
 
-func (o *Order) DealPrice(p float32) {
+func (o *Order) GetPrice() float64 {
+    if o.type_ == ORDER_TYPE_BUY || o.type_ == ORDER_TYPE_SELL{
+        return o.dealPrice
+    } else if (o.dealPrice == 0) {
+        return o.callPrice
+    } else {
+        return o.dealPrice
+    }
+}
+
+func (o *Order) DealPrice(p float64) {
     o.dealPrice = p
 }
 
@@ -85,13 +96,14 @@ func (o *Order) SetNext(next *Order) {
 }
 
 func (o *Order) AmountSum() int {
-    amount := o.amount
+    amount := o.GetAmount()
+    order := o
     for {
-        order := o.GetNext()
+        order = order.GetNext()
         if order == nil {
             return amount
         }
-        amount = amount + order.amount
+        amount = amount + order.GetAmount()
     }
 }
 
@@ -113,10 +125,11 @@ func (o *Order) Deal(amount int) *Order {
 func (o *Order) End() *Order {
     if o.status == ORDER_STATUS_NEW {
         o.status = ORDER_STATUS_WITHDRAW
-    } else {
+        o.log(0)
+    } else if (o.status == ORDER_STATUS_DONE_PART){
         o.status = ORDER_STATUS_WITHDRAW_REST
+        o.log(0)
     }
-    o.log(0)
     return o
 }
 
@@ -139,7 +152,7 @@ func (o *Order) log(amountPart int) {
     if amount == 0 {
         amount = o.amount
     }
-    logger.Printf("%s, %s, %s, %f %d %s", time.Now(), o.serial, o.type_, o.callPrice, amount, o.status)
+    logger.Printf("%s, %s, %s, %.2f %d %s", time.Now(), o.serial, o.type_, o.GetPrice(), amount, o.status)
     logger.Println("")
 }
 
@@ -177,28 +190,35 @@ func PushOrder(o *Order)  {
 }
 
 func pushOrders(orders *list.List, o *Order) {
-    if(orders.Len() == 0){
-        orders.PushBack(o)
-        return
-    }
     baseOrderEle := orders.Front()
     for {
-        baseOrder := baseOrderEle.Value.(*Order)
-        if baseOrder.callPrice < o.callPrice {
-            orders.InsertBefore(o, baseOrderEle)
-            return
-        }
-        if baseOrder.callPrice == o.callPrice {
-            baseOrder.SetNext(o)
-            return
-        }
-        if baseOrderEle = baseOrderEle.Next(); baseOrderEle == nil {
+        if  baseOrderEle == nil {
             orders.PushBack(o)
-            break;
+            break
         }
+        baseOrder := baseOrderEle.Value.(*Order)
+        if baseOrder.callPrice > o.callPrice {
+            baseOrderEle = baseOrderEle.Next();
+            continue
+        } else if baseOrder.CallPriceString() == o.CallPriceString() {
+            linkSamePrice(baseOrder, o)
+        } else {
+            orders.InsertBefore(o, baseOrderEle)
+        }
+        break
     }
 }
 
+func linkSamePrice(baseOrder *Order, o *Order){
+    tempOrder := baseOrder
+    for {
+        if tempOrder.next == nil{
+            tempOrder.SetNext(o)
+            break
+        }
+        tempOrder = tempOrder.GetNext()
+    }
+}
 
 func OrderOne (symbol string, buy bool) (*list.List, *list.Element) {
     var orderList *list.List

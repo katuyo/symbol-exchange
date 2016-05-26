@@ -105,5 +105,7 @@ func hedgeOrders(symbol string) {
     if buyMax.GetPrice() < sellMin.GetPrice() {
         return
     }
+    //TODO While buyMaxPrice > sellMinPrice , which would be the deal price ?
+
 }
 

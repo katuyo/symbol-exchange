@@ -2,9 +2,16 @@
 A typical symbol exchange system powered by Macaron@Golang [https://github.com/go-macaron/macaron]
 
 # Install
-go get github.com/katuyo/symbol-exchange 
-cd symbol-exchange
-go run main.go
+go get github.com/katuyo/symbol-exchange
+
+# Run
+cd symbol-exchange &&
+go run *.go
+
+# Build & Run
+cd symbol-exchange &&
+go build &&
+./symbol-exchange
 
 # Test
-go test
+python2 integration/script.py

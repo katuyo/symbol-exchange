@@ -5,11 +5,16 @@ import "time"
 type Stock struct {
     Symbol string
     Open  float32
+    InitAmount int
     date  time.Time
 }
 
 func (s *Stock) GetDate() time.Time {
     return s.date;
+}
+
+func (s *Stock) Issue() {
+    PushOrder(NewOrder(s.Symbol, ORDER_TYPE_BID, s.Open, s.InitAmount))
 }
 
 /** #########################################
@@ -29,3 +34,4 @@ func GetStock(symbol string) *Stock {
 func GetStockMap() map[string]*Stock {
     return stockMap
 }
+

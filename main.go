@@ -13,6 +13,7 @@ import (
 func prepareStocks(){
     stock := &models.Stock{Symbol: "WSCN", Open: 100}
     models.PushStock(stock)
+    stock.Issue()
 }
 
 func main() {

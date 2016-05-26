@@ -58,7 +58,7 @@ func (o *Order) CallPrice() float32 {
     return o.callPrice
 }
 
-func (o *Order) GetPrice() {
+func (o *Order) GetPrice() float32 {
     return o.dealPrice
 }
 

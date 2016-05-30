@@ -2,6 +2,8 @@
 *.o
 *.a
 *.so
+symbol-exchange
+coverage.out
 
 # Folders
 _obj
